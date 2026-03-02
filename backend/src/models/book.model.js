@@ -1,3 +1,4 @@
+// backend/src/models/book.model.js
 const mongoose = require("mongoose");
 
 const BookSchema = new mongoose.Schema(
@@ -37,7 +38,7 @@ const BookSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Optional: normalize some fields
+// Normalize arrays
 BookSchema.pre("save", function normalize(next) {
   if (Array.isArray(this.authors)) {
     this.authors = this.authors.map((s) => String(s).trim()).filter(Boolean);
@@ -47,6 +48,9 @@ BookSchema.pre("save", function normalize(next) {
   }
   next();
 });
+
+// Optional: text index to support "q" search well (Mongo will build it on first use)
+BookSchema.index({ name: "text", authors: "text", isbn: "text", tags: "text" });
 
 const Book = mongoose.model("Book", BookSchema);
 
