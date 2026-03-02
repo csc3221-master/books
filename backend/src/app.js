@@ -1,17 +1,24 @@
 const express = require("express");
+const { isDbReady } = require("./config/db");
 
 function createApp() {
   const app = express();
 
-  // Parse JSON bodies
   app.use(express.json());
 
-  // Health check (Phase-1)
+  // Liveness: container is running
   app.get("/health", (req, res) => {
     res.status(200).json({ ok: true });
   });
 
-  // Basic 404 (nice to have)
+  // Readiness: app is ready to serve requests that need the DB
+  app.get("/ready", (req, res) => {
+    if (isDbReady()) {
+      return res.status(200).json({ ready: true, db: "connected" });
+    }
+    return res.status(503).json({ ready: false, db: "not_connected" });
+  });
+
   app.use((req, res) => {
     res.status(404).json({ error: "Not Found" });
   });
