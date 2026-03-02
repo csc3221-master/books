@@ -1,0 +1,140 @@
+📌 What Each Part Is For
+
+Root Level
+
+docker-compose.yml
+
+Defines:
+	•	api service (Node/Express)
+	•	mongo service
+	•	shared network
+	•	volume for Mongo persistence
+
+This is what makes the 2-container system work.
+
+⸻
+
+.gitignore
+
+Should ignore:
+	•	node_modules
+	•	.env
+	•	Docker volumes
+	•	OS junk
+	•	logs
+
+⸻
+
+Makefile (recommended for teaching)
+
+So you can run:
+
+
+
+make up
+make down
+make logs
+make rebuild
+make reset-db
+
+Clean workflow. Very “software engineering class” style.
+
+⸻
+
+backend/
+
+This is the application container.
+
+We intentionally isolate backend so later you can add:
+
+frontend/
+
+without polluting structure.
+
+⸻
+
+src/
+
+We separate:
+
+app.js
+	•	Express app definition
+	•	Middleware setup
+	•	Routes registration
+	•	Error middleware registration
+
+No listen() here
+
+⸻
+
+server.js
+	•	Connect to Mongo
+	•	Start server
+	•	Handles boot logic
+
+This separation is industry-style and makes testing easier.
+
+⸻
+
+config/
+
+db.js
+	•	Mongoose connection logic
+	•	Reads process.env.MONGO_URL
+
+⸻
+
+models/
+
+book.model.js
+	•	Mongoose schema
+	•	Validation
+	•	Indexes (isbn unique)
+	•	timestamps
+
+⸻
+
+controllers/
+
+book.controller.js
+	•	Business logic
+	•	CRUD operations
+
+Routes should stay thin.
+
+⸻
+
+routes/
+
+book.routes.js
+	•	Express Router
+	•	Maps endpoints to controller methods
+
+⸻
+
+middleware/
+
+error.middleware.js
+	•	Centralized error handler
+	•	Standard JSON error responses
+
+⸻
+
+🎯 Why This Structure?
+
+Because:
+	1.	It scales.
+	2.	It separates concerns.
+	3.	It matches what students see in real Node backends.
+	4.	You can later:
+	•	Add authentication
+	•	Add validation layer
+	•	Add logging
+	•	Add tests folder
+	•	Add frontend container
+
+without restructuring everything.
+
+
+
+
