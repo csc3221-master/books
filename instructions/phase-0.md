@@ -1,245 +1,105 @@
-# Phase-0 — Project Bootstrap (Complete Replication Guide)
+# Books Project — Phase 0 (tag: `phase-0-structure`)
 
-This document records **exactly what Phase-0 accomplished** so it can be reproduced from scratch at any time.
+This document captures **exactly what exists in Phase 0** of the repo and what we intended it to enable next.
 
-Phase-0 Goal:
-Create a clean, minimal, reproducible full-stack backend foundation using:
-
-- Node.js
-- Express
-- MongoDB
-- Docker + Docker Compose
-- Environment variable configuration
-- Git baseline
-
-At the end of Phase-0, the system must start with a single command and expose a working health endpoint.
+> Source-of-truth tag: `phase-0-structure` (created Mar 2, 2026).  [oai_citation:0‡GitHub](https://github.com/csc3221-master/books/tags)
 
 ---
 
-# 1. Initialize the Repository
+## 1) What Phase 0 accomplished
 
-```bash
-mkdir books
-cd books
-git init
-```
+Phase 0 was a **scaffold-only phase**: we created the repository skeleton and put in the “plumbing placeholders” so later phases could add Docker, Express, Mongo, etc.
 
-Create base structure:
+At this tag, the repo contains (top-level):
 
-```
+- `backend/` (folder scaffold)
+- `.gitignore`
+- `LICENSE` (MIT)
+- `README.md`
+- `docker-compose.yml`
+- `makefile`  
+
+> [oai_citation:1‡GitHub](https://github.com/csc3221-master/books/tree/phase-0-structure)
+
+---
+
+## 2) Folder structure (Phase 0)
+
+~~~text
 books/
-  backend/
-    src/
-  docker-compose.yml
-  .gitignore
-  README.md
-  .env.example
-```
+├─ backend/
+├─ .gitignore
+├─ LICENSE
+├─ README.md
+├─ docker-compose.yml
+└─ makefile
+~~~  
+
+> (As listed in the repo at `phase-0-structure`.)  [oai_citation:2‡GitHub](https://github.com/csc3221-master/books/tree/phase-0-structure)
+
+### Intent behind each item
+
+#### `backend/`
+A dedicated place for the API code (Express/Mongoose will arrive in later phases). In Phase 0, it exists primarily to establish the structure.  
+
+> [oai_citation:3‡GitHub](https://github.com/csc3221-master/books/tree/phase-0-structure)
+
+#### `.gitignore`
+A standard Node-oriented ignore file (logs, `node_modules/`, environment files like `.env`, build caches, etc.).  
+
+> [oai_citation:4‡GitHub](https://raw.githubusercontent.com/csc3221-master/books/phase-0-structure/.gitignore)
+
+#### `LICENSE`
+MIT license included at repo root.  
+
+> [oai_citation:5‡GitHub](https://github.com/csc3221-master/books/tree/phase-0-structure)
+
+#### `README.md`
+Minimal placeholder README containing only the project header at this phase.  
+
+> [oai_citation:6‡GitHub](https://raw.githubusercontent.com/csc3221-master/books/phase-0-structure/README.md)
+
+#### `docker-compose.yml`
+Present at repo root as part of the scaffold (intended to eventually orchestrate containers like API + Mongo). In this tag, the raw view returned no content, which strongly suggests it was an empty placeholder file in Phase 0.  
+
+> [oai_citation:7‡GitHub](https://github.com/csc3221-master/books/tree/phase-0-structure)
+
+#### `makefile`
+Present at repo root as part of the scaffold (intended to provide convenient `make up`, `make down`, etc.). In this tag, the raw view returned no content, which strongly suggests it was an empty placeholder file in Phase 0.
+
+> [oai_citation:8‡GitHub](https://github.com/csc3221-master/books/tree/phase-0-structure)
 
 ---
 
-# 2. Create .gitignore
+## 3) What you can “replicate” from Phase 0 (quick checklist)
 
-Create `.gitignore` in project root:
+If you ever want to recreate Phase 0 from scratch, do this:
 
-```
-node_modules/
-.env
-.DS_Store
-npm-debug.log*
-```
-
----
-
-# 3. Initialize Backend (Node + Express)
-
-```bash
-cd backend
-npm init -y
-```
-
-Install dependencies:
-
-```bash
-npm install express mongoose dotenv cors
-npm install --save-dev nodemon
-```
-
-Modify `backend/package.json` scripts:
-
-```json
-{
-  "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
-  }
-}
-```
+1. Create repo `books`
+2. Create `backend/` directory
+3. Add:
+   - `README.md` with just `# books`
+   - `.gitignore` (Node defaults)
+   - `LICENSE` (MIT)
+   - `docker-compose.yml` placeholder
+   - `makefile` placeholder
+4. Tag the result as `phase-0-structure` (or your own Phase-0 tag name)
 
 ---
 
-# 4. Create Express Server
+## 4) Notes / expectations for the next phases
 
-Create file: `backend/src/server.js`
+Phase 0 intentionally does **not** include:
+- Express app setup
+- Dockerfile(s) or a working docker-compose service definition
+- Mongoose or Mongo wiring
+- Any schema/models/routes/controllers
 
-Minimal required functionality:
+Those arrive starting in Phase 1+ (per the later tags visible in the repo).  
 
-- Load environment variables
-- Connect to MongoDB
-- Provide `/api/health` endpoint
-- Listen on `0.0.0.0`
+> [oai_citation:9‡GitHub](https://github.com/csc3221-master/books/tags)
 
-Example implementation:
-
-```javascript
-require("dotenv").config();
-const express = require("express");
-const mongoose = require("mongoose");
-const cors = require("cors");
-
-const app = express();
-
-app.use(cors());
-app.use(express.json());
-
-const PORT = process.env.PORT || 3000;
-const MONGO_URI = process.env.MONGO_URI;
-
-mongoose
-  .connect(MONGO_URI)
-  .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.error("MongoDB connection error:", err));
-
-app.get("/api/health", (req, res) => {
-  res.json({ status: "ok" });
-});
-
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server running on port ${PORT}`);
-});
-```
-
----
-
-# 5. Environment Variables
-
-Create `.env` (NOT committed):
-
-```
-PORT=3000
-MONGO_URI=mongodb://mongo:27017/books
-```
-
-Create `.env.example` (commit this file):
-
-```
-PORT=3000
-MONGO_URI=mongodb://mongo:27017/books
-```
-
-Important rule:
-
-- When running inside Docker, use `mongo` as hostname.
-- When running Mongo locally (outside Docker), use `localhost`.
-
----
-
-# 6. Backend Dockerfile
-
-Create `backend/Dockerfile`:
-
-```dockerfile
-FROM node:20
-
-WORKDIR /app
-
-COPY package*.json ./
-RUN npm install
-
-COPY . .
-
-EXPOSE 3000
-
-CMD ["npm", "start"]
-```
-
----
-
-# 7. Docker Compose Configuration
-
-Create `docker-compose.yml` in project root:
-
-```yaml
-services:
-  mongo:
-    image: mongo:7
-    container_name: books_mongo
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo_data:/data/db
-
-  api:
-    build: ./backend
-    container_name: books_api
-    ports:
-      - "3000:3000"
-    env_file:
-      - .env
-    depends_on:
-      - mongo
-
-volumes:
-  mongo_data:
-```
-
----
-
-# 8. Run the System
-
-From project root:
-
-```bash
-docker compose up --build
-```
-
-Verify health endpoint:
-
-```bash
-curl http://localhost:3000/api/health
-```
-
-Expected response:
-
-```json
-{"status":"ok"}
-```
-
-Stop containers:
-
-```bash
-docker compose down
-```
-
-Stop and delete database volume:
-
-```bash
-docker compose down -v
-```
-
----
-
-# 9. Common Phase-0 Rules We Established
-
-1. Always bind Express to `0.0.0.0`
-2. Always use service name (`mongo`) inside Docker
-3. Keep environment config externalized
-4. Use Docker Compose as the single source of truth
-5. Make startup reproducible with one command
-
----
-
-# 10. Git Baseline Commit
+## 5) Git Baseline Commit
 
 Once stable:
 
@@ -252,7 +112,7 @@ git push origin main --tags
 
 ---
 
-# 11. Phase-0 Definition of Done
+## 6) Phase-0 Definition of Done
 
 Phase-0 is successful if:
 
@@ -263,5 +123,54 @@ Phase-0 is successful if:
 5. MongoDB persists data via Docker volume.
 
 ---
+
+## 7) A useful script for commiting and pushing:
+```bash
+#!/usr/bin/env bash
+
+# Exit immediately if a command fails
+set -e
+
+# ---------- Argument Validation ----------
+if [ "$#" -ne 2 ]; then
+    echo "Usage: $0 <tag-name> <commit-message>"
+    echo "Example: $0 phase-777-future \"Final implementation complete\""
+    exit 1
+fi
+
+TAG_NAME="$1"
+COMMIT_MESSAGE="$2"
+
+echo "----------------------------------------"
+echo "Tag Name      : $TAG_NAME"
+echo "Commit Message: $COMMIT_MESSAGE"
+echo "----------------------------------------"
+
+# ---------- Git Flow ----------
+echo "Checking status..."
+git status
+
+echo "Adding changes..."
+git add .
+
+echo "Creating commit..."
+git commit -m "$COMMIT_MESSAGE"
+
+echo "Pushing main branch..."
+git push origin main
+
+echo "Creating annotated tag..."
+git tag -a "$TAG_NAME" -m "$TAG_NAME - $COMMIT_MESSAGE"
+
+echo "Pushing tag..."
+git push origin "$TAG_NAME"
+
+echo "----------------------------------------"
+echo "Done ✅"
+echo "Tag $TAG_NAME successfully created and pushed."
+echo "----------------------------------------"
+
+```
+
 
 END OF PHASE-0 DOCUMENTATION

@@ -1,278 +1,275 @@
-# Phase-1 — Domain Modeling + CRUD Foundation
+# Books Project — Phase 1 (tag: `phase-1-express-boot`)
 
-Phase-1 Goal:
-Transform the Phase-0 infrastructure into a real API by introducing:
+Phase-1 goal: **get an Express API booting inside Docker** and expose a simple **health endpoint** so we can verify container wiring early, before adding Mongo/Mongoose and CRUD.
 
-- A proper domain model (Book)
-- Mongoose schema & validation
-- Layered folder structure
-- RESTful CRUD endpoints
-- Proper error handling
-- Clean API routing structure
-
-At the end of Phase-1, the system must support full CRUD operations for books.
+**Source-of-truth tag:** `phase-1-express-boot`  
+**Repo:** `https://github.com/csc3221-master/books`  
+**Tags page:** `https://github.com/csc3221-master/books/tags`
 
 ---
 
-# 1. Refactor Folder Structure
+## 1) What changed from Phase-0 → Phase-1
 
-Inside `backend/src`, create:
+Phase 1 adds:
 
-```
-backend/src/
-  server.js
-  models/
-    book.model.js
-  routes/
-    book.routes.js
-  controllers/
-    book.controller.js
-```
+- A real backend Node/Express project (`backend/package.json` + `backend/src/`)
+- A Dockerfile to run the backend in a container
+- A docker-compose service for the API (no Mongo yet in this phase)
+- A working endpoint: `GET /health` returns `{ ok: true }`
 
-We move toward separation of concerns:
+Phase 1 does **not** add:
 
-- models → data schema
-- controllers → business logic
-- routes → HTTP wiring
+- MongoDB container / mongoose connection
+- Book model, controllers, routes, CRUD
+- A populated Makefile (the file exists but is empty in this tag)
 
 ---
 
-# 2. Create Book Model (Mongoose Schema)
+## 2) Repo structure at Phase-1
 
-File: `backend/src/models/book.model.js`
+At tag `phase-1-express-boot`, the repo contains:
 
-```javascript
-const mongoose = require("mongoose");
+```text
+books/
+  backend/
+    Dockerfile
+    package.json
+    src/
+      app.js
+      server.js
+  .gitignore
+  LICENSE
+  README.md
+  docker-compose.yml
+  makefile
+  structure.txt
+```
 
-const bookSchema = new mongoose.Schema(
-  {
-    title: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    authors: [
-      {
-        type: String,
-        required: true,
-        trim: true,
-      },
-    ],
-    year: {
-      type: Number,
-      required: true,
-    },
-    isbn: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true,
-    },
-    copies: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
+Notes:
+
+- `README.md` is still minimal (`# books`) at this phase.
+- `makefile` exists but is empty at this phase.
+- `structure.txt` is a planning artifact describing the intended future architecture.
+
+---
+
+## 3) Backend: Node + Express boot
+
+### 3.1 `backend/package.json`
+
+- Name: `books-api`
+- Main: `src/server.js`
+- Scripts:
+  - `npm start` → `node src/server.js`
+  - `npm run dev` → `nodemon src/server.js`
+- Dependencies:
+  - `express`
+- Dev dependencies:
+  - `nodemon`
+
+Exact content:
+
+```json
+{
+  "name": "books-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
   },
-  { timestamps: true }
-);
-
-module.exports = mongoose.model("Book", bookSchema);
-```
-
-Design decisions:
-
-- `authors` is an array (books may have multiple authors)
-- `isbn` is unique
-- `copies` defaults to 0
-- timestamps enabled
-
----
-
-# 3. Create Book Controller
-
-File: `backend/src/controllers/book.controller.js`
-
-```javascript
-const Book = require("../models/book.model");
-
-exports.createBook = async (req, res) => {
-  try {
-    const book = await Book.create(req.body);
-    res.status(201).json(book);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
   }
-};
-
-exports.getAllBooks = async (req, res) => {
-  try {
-    const books = await Book.find();
-    res.json(books);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-exports.getBookById = async (req, res) => {
-  try {
-    const book = await Book.findById(req.params.id);
-    if (!book) return res.status(404).json({ error: "Book not found" });
-    res.json(book);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-};
-
-exports.updateBook = async (req, res) => {
-  try {
-    const book = await Book.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    );
-    if (!book) return res.status(404).json({ error: "Book not found" });
-    res.json(book);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-};
-
-exports.deleteBook = async (req, res) => {
-  try {
-    const book = await Book.findByIdAndDelete(req.params.id);
-    if (!book) return res.status(404).json({ error: "Book not found" });
-    res.json({ message: "Book deleted" });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-};
+}
 ```
 
 ---
 
-# 4. Create Routes
+### 3.2 App factory: `backend/src/app.js`
 
-File: `backend/src/routes/book.routes.js`
+We separated:
+- `createApp()` (build the Express app)
+- `server.js` (boot + listen)
 
-```javascript
+Features in Phase-1:
+- JSON body parsing
+- `GET /health` endpoint
+- Basic JSON 404 handler
+
+Exact content:
+
+```js
 const express = require("express");
-const router = express.Router();
-const controller = require("../controllers/book.controller");
 
-router.post("/", controller.createBook);
-router.get("/", controller.getAllBooks);
-router.get("/:id", controller.getBookById);
-router.put("/:id", controller.updateBook);
-router.delete("/:id", controller.deleteBook);
+function createApp() {
+  const app = express();
 
-module.exports = router;
+  // Parse JSON bodies
+  app.use(express.json());
+
+  // Health check (Phase-1)
+  app.get("/health", (req, res) => {
+    res.status(200).json({ ok: true });
+  });
+
+  // Basic 404 (nice to have)
+  app.use((req, res) => {
+    res.status(404).json({ error: "Not Found" });
+  });
+
+  return app;
+}
+
+module.exports = { createApp };
 ```
 
 ---
 
-# 5. Wire Routes into Server
+### 3.3 Server boot: `backend/src/server.js`
 
-Modify `backend/src/server.js`:
+- Reads `PORT` from environment (defaults to 3000)
+- Binds to `0.0.0.0` so it works in Docker port publishing
+- Logs the listening URL
 
-Add:
+Exact content:
 
-```javascript
-const bookRoutes = require("./routes/book.routes");
+```js
+const { createApp } = require("./app");
+const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
+
+function main() {
+  const app = createApp();
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`API listening on http://0.0.0.0:${PORT}`);
+  });
+}
+
+main();
 ```
-
-After middleware:
-
-```javascript
-app.use("/api/books", bookRoutes);
-```
-
-Server now exposes:
-
-- POST    /api/books
-- GET     /api/books
-- GET     /api/books/:id
-- PUT     /api/books/:id
-- DELETE  /api/books/:id
 
 ---
 
-# 6. Test CRUD Manually
+## 4) Containerization
 
-Start system:
+### 4.1 `backend/Dockerfile`
+
+Key decisions:
+
+- Base image: `node:20-alpine`
+- `WORKDIR /app`
+- Copy package files first (better Docker caching), install prod deps only
+- Copy `src` only
+- `NODE_ENV=production`
+- Expose 3000
+- Run `npm start`
+
+Exact content:
+
+```dockerfile
+FROM node:20-alpine
+WORKDIR /app
+
+# Install deps first (better Docker layer caching)
+COPY package*.json ./
+RUN npm install --omit=dev
+
+# Copy source
+COPY src ./src
+
+# Runtime env + port
+ENV NODE_ENV=production
+EXPOSE 3000
+CMD ["npm", "start"]
+```
+
+---
+
+### 4.2 `docker-compose.yml` (root)
+
+Phase-1 compose runs **only the API container** (still no mongo).
+
+- Service name: `api`
+- Build context: `./backend`
+- Publishes port 3000
+- Sets `PORT=3000`
+
+Exact content:
+
+```yaml
+services:
+  api:
+    build:
+      context: ./backend
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+```
+
+---
+
+## 5) Run / Verify Phase-1
+
+From repo root:
 
 ```bash
 docker compose up --build
 ```
 
-Create book:
+Verify health endpoint from your host:
 
 ```bash
-curl -X POST http://localhost:3000/api/books \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Clean Code",
-    "authors": ["Robert C. Martin"],
-    "year": 2008,
-    "isbn": "9780132350884",
-    "copies": 5
-  }'
+curl http://localhost:3000/health
 ```
 
-Get all books:
+Expected JSON:
 
-```bash
-curl http://localhost:3000/api/books
+```json
+{ "ok": true }
 ```
 
-Update:
+Stop containers:
 
 ```bash
-curl -X PUT http://localhost:3000/api/books/<id> \
-  -H "Content-Type: application/json" \
-  -d '{"copies": 10}'
-```
-
-Delete:
-
-```bash
-curl -X DELETE http://localhost:3000/api/books/<id>
+docker compose down
 ```
 
 ---
 
-# 7. Phase-1 Design Principles Established
+## 6) Notes about `structure.txt` (planning artifact)
 
-1. Separation of concerns (model/controller/routes)
-2. RESTful API structure
-3. Proper HTTP status codes
-4. Mongoose validation enforced
-5. Unique ISBN constraint
-6. Clean JSON responses
-7. No business logic inside routes
+`structure.txt` in this tag is a planning note describing the **future intended layout** (config/, models/, controllers/, routes/, middleware/, etc.). It is **not yet implemented** in Phase-1, but it documents the direction we planned to move toward.
 
 ---
 
-# 8. Phase-1 Definition of Done
+## 7) Phase-1 Definition of Done
 
-Phase-1 is complete if:
+Phase-1 is done when:
 
-1. Books can be created.
-2. Books can be listed.
-3. Books can be retrieved by ID.
-4. Books can be updated.
-5. Books can be deleted.
-6. Duplicate ISBNs are rejected.
-7. API behaves consistently under Docker.
+1. `docker compose up --build` successfully builds and runs the API container.
+2. `GET /health` returns HTTP 200 with `{ ok: true }`.
+3. Unknown routes return a JSON 404 response.
 
 ---
 
-# 9. Commit + Tag
+## 8) Phase-1 tag
+
+This phase is tagged as:
+
+- `phase-1-express-boot`
+
+## 9) Commit + Tag
 
 ```bash
 git add .
-git commit -m "Phase-1: Book model + CRUD endpoints"
-git tag -a "Phase-1" -m "CRUD foundation complete"
+git commit -m "Phase-1: Express boot"
+git tag -a "phase-1-express-boot" -m "Express boot"
 git push origin main --tags
 ```
 
